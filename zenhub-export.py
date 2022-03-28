@@ -11,7 +11,7 @@ Usage:
 
 Add the following to config.ini with appropriate values:
 
-[DEFAULT]
+[ACCESS]
 AUTH_TOKEN =
 ZEN_ACCESS =
 QUERY = # See https://developer.github.com/v3/issues/#list-repository-issues
@@ -105,21 +105,23 @@ def get_issues(repo_data):
                 break
 
 
-REPO_LIST = [("sensespidey/example-agile-project", "473431083")]
-
 config = configparser.ConfigParser()
 config.read('config.ini')
 
-AUTH = ('token', config['DEFAULT']['AUTH_TOKEN'])
-ACCESS_TOKEN = config['DEFAULT']['ZEN_ACCESS']
+REPO_LIST = []
+for (repo_name, repo_id) in config.items("REPO_LIST"):
+    REPO_LIST.append( (repo_name, repo_id) )
+
+AUTH = ('token', config['ACCESS']['AUTH_TOKEN'])
+ACCESS_TOKEN = config['ACCESS']['ZEN_ACCESS']
 
 # See https://developer.github.com/v3/issues/#list-repository-issues
-QUERY = config['DEFAULT']['QUERY']
+QUERY = config['ACCESS']['QUERY']
 
 ISSUES = 0
-FILENAME = config['DEFAULT']['FILENAME']
-OPENFILE = open(FILENAME, 'w')
-FILEOUTPUT = csv.writer(OPENFILE)
+FILENAME = config['ACCESS']['FILENAME']
+OPENFILE = open(FILENAME, 'w', newline='\n')
+FILEOUTPUT = csv.writer(OPENFILE, dialect='excel', quoting=csv.QUOTE_NONNUMERIC)
 
 FILEOUTPUT.writerow(('Repository', 
                      'Issue Number', 'Issue Title',
