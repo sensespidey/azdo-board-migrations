@@ -1,20 +1,55 @@
 # Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+
+This repository contains Python scripts to facilitate migrating Work Items into Azure DevOps from a few external sources:
+
+- Zenhub/Github
+- Jira
+- GitLab
+
+The primary goal is to collect issue data and generate a CSV file appropriate for import into an Azure DevOps project.
 
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+To make use of this code, you need to set up appropriate credentials, and create a config.ini file to contain them.
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+## Credentials
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+The following credentials are needed:
+
+- GitHub Personal Access Token (link)
+- ZenHub Access Key (link)
+
+
+##  Config.ini
+
+
+Add the following to config.ini with appropriate values:
+
+```
+[ACCESS]
+AUTH_TOKEN = <GitHub Personal Access Token>
+ZEN_ACCESS = <ZenHub Access Key>
+QUERY = # See https://developer.github.com/v3/issues/#list-repository-issues
+FILENAME = 
+
+[REPO_LIST]
+sensespidey/example-agile-project = 473431083
+```
+
+The REPO_LIST should have the ID of the GitHub repository, which you can get by querying the GitHub API like so:
+
+```
+curl --location --request GET 'https://api.github.com/repos/ssc-spc-ccoe-cei/gcpboard' \
+--header 'Authorization: token <insert GitHub PAT>'
+```
+# Usage
+
+To grab issues from Zen
+
+# Credits
+
+These scripts were derived from the following sources:
+
+* https://gist.github.com/unbracketed/3380407
+* https://github.com/ZenHubIO/support/issues/1070
+* https://gist.github.com/Kebiled/7b035d7518fdfd50d07e2a285aff3977 @PinnaclePSM Author Jamie Belcher

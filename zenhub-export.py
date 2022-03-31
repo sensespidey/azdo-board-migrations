@@ -1,32 +1,10 @@
 """
 Author: Derek Laventure <derek.laventure@ssc.gc.ca>
-Originally from: https://gist.github.com/unbracketed/3380407
-Exports Issues from a specified repository to a CSV file
-Uses basic authentication (Github username + password) to retrieve Issues
-from a repository that username has access to. Supports Github API v3.
 
+Collects issue data from ZenHub/GitHub and generates a CSV suitable for import
+into Azure DevOps.
 
-Post here: https://github.com/ZenHubIO/support/issues/1070
-
-Usage:
-
-Add the following to config.ini with appropriate values:
-
-[ACCESS]
-AUTH_TOKEN =
-ZEN_ACCESS =
-QUERY = # See https://developer.github.com/v3/issues/#list-repository-issues
-FILENAME = 
-
-[REPO_LIST]
-sensespidey/example-agile-project = 473431083
-
-Exports Issues from a list of repositories to individual CSV files
-Uses basic authentication (Github API Token and Zenhub API Token)
-to retrieve Issues from a repository that token has access to.
 Supports Github API v3 and ZenHubs current working API.
-Derived from https://gist.github.com/Kebiled/7b035d7518fdfd50d07e2a285aff3977
-@PinnaclePSM Author Jamie Belcher
 """
 import csv
 import datetime
