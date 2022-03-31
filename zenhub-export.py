@@ -1,4 +1,5 @@
 """
+Author: Derek Laventure <derek.laventure@ssc.gc.ca>
 Originally from: https://gist.github.com/unbracketed/3380407
 Exports Issues from a specified repository to a CSV file
 Uses basic authentication (Github username + password) to retrieve Issues
@@ -17,6 +18,8 @@ ZEN_ACCESS =
 QUERY = # See https://developer.github.com/v3/issues/#list-repository-issues
 FILENAME = 
 
+[REPO_LIST]
+sensespidey/example-agile-project = 473431083
 
 Exports Issues from a list of repositories to individual CSV files
 Uses basic authentication (Github API Token and Zenhub API Token)
@@ -30,6 +33,9 @@ import datetime
 import requests
 import configparser
 
+# DEBUG
+from rich import print as rprint
+
 def write_issues(r, csvout, repo_name, repo_ID):
     if not r.status_code == 200:
         raise Exception("Request returned status of:"+str(r.status_code))
@@ -41,44 +47,63 @@ def write_issues(r, csvout, repo_name, repo_ID):
 
         zenhub_issue_url = 'https://api.zenhub.io/p1/repositories/' + str(repo_ID) + '/issues/' + str(issue['number']) + '?access_token=' + ACCESS_TOKEN
         zen_r = requests.get(zenhub_issue_url, verify=False).json()
+
+        # DEBUG
+        rprint(issue)
+        rprint(zen_r)
+
         DateCreated = issue['created_at'][:-10]
         DateUpdated = issue['updated_at'][:-10]
-        if 'pull_request' not in issue:
-            global ISSUES
-            ISSUES += 1
-            assignees, tag, category, priority, labels = '', '', '', '', ''
-            for i in issue['assignees'] if issue['assignees'] else []:
-                assignees += i['login'] + ','
 
-            for x in issue['labels'] if issue['labels'] else []:
-                if "Category" in x['name']:
-                    category = x['name'][11:11 + len(x['name'])]
-                elif "Tag" in x['name']:
-                    tag = x['name'][6:6 + len(x['name'])]
-                elif "Priority" in x['name']:
-                    priority = x['name'][11:11 + len(x['name'])]
-                else:
-                    labels += x['name'] + ','
+        # Ignore pull requests, which github treats as issues
+        if 'pull_request' in issue:
+            continue
 
-            estimate = zen_r.get('estimate', dict()).get('value', "")
+        global ISSUES
+        ISSUES += 1
+        assignees, tag, category, priority, labels = '', '', '', '', ''
 
-            if issue['state'] == 'closed':
-                Pipeline = 'Closed'
+        for i in issue['assignees'] if issue['assignees'] else []:
+            assignees += i['login'] + ','
+
+        for x in issue['labels'] if issue['labels'] else []:
+            if "Category" in x['name']:
+                category = x['name'][11:11 + len(x['name'])]
+            elif "Tag" in x['name']:
+                tag = x['name'][6:6 + len(x['name'])]
+            elif "Priority" in x['name']:
+                priority = x['name'][11:11 + len(x['name'])]
             else:
-                Pipeline = zen_r.get('pipeline', dict()).get('name', "")
+                labels += x['name'] + ','
 
-            if not issue.get('body'):
-                issue['body'] = ''
+        estimate = zen_r.get('estimate', dict()).get('value', "")
 
-            csvout.writerow([repo_name, 
-                            issue['number'], issue['title'].encode('utf-8'),
-                            issue['body'].encode('utf-8'), 
-                            assignees[:-1],
-                            issue['state'],
-                            Pipeline, DateCreated, DateUpdated,
-                            labels[:-1],
-                            category, tag, priority,
-                            estimate])
+        if issue['state'] == 'closed':
+            Pipeline = 'Closed'
+        else:
+            Pipeline = zen_r.get('pipeline', dict()).get('name', "")
+
+        if not issue.get('body'):
+            issue['body'] = ''
+
+        row_dict = {
+            #'ID': issue['number'],
+            # @TODO: make this depend on is_epic
+            'Work Item Type': 'Work Item Type',
+            'Title': issue['title'],
+            'Description': issue['body'],
+            'Tags': tag,
+            'Assigned To': assignees[:-1],
+            'Priority': priority,
+            'State': issue['state'],
+            'Created By': issue['user']['login'],
+            'Created Date': DateCreated,
+            'Changed Date': DateUpdated,
+            'Effort': estimate,
+            #'Parent': 'Parent',
+            'Iteration Path': 'Backlog',
+        }
+        csvout.writerow(row_dict)
 
 def get_issues(repo_data):
     repo_name = repo_data[0]
@@ -86,6 +111,8 @@ def get_issues(repo_data):
 
     issues_for_repo_url = f'https://api.github.com/repos/{repo_name}/issues?{QUERY}'
     print('Retrieving issues.... ' + issues_for_repo_url)
+
+    # @TODO: wrap this in an iterator
     r = requests.get(issues_for_repo_url, auth=AUTH, verify=False)
     write_issues(r, FILEOUTPUT, repo_name, repo_ID)
 
@@ -94,6 +121,8 @@ def get_issues(repo_data):
             [(rel[6:-1], url[url.index('<') + 1:-1]) for url, rel in
              [link.split(';') for link in
               r.headers['link'].split(',')]])
+        # @TODO: wrap this in an iterator?
+        # this goes away in the iterator..
         while 'last' in pages and 'next' in pages:
             pages = dict(
                 [(rel[6:-1], url[url.index('<') + 1:-1]) for url, rel in
@@ -105,38 +134,51 @@ def get_issues(repo_data):
                 break
 
 
-config = configparser.ConfigParser()
-config.read('config.ini')
+if __name__ == '__main__':
+    config = configparser.ConfigParser()
+    config.read('config-gcpboard.ini')
 
-REPO_LIST = []
-for (repo_name, repo_id) in config.items("REPO_LIST"):
-    REPO_LIST.append( (repo_name, repo_id) )
+    # Get a list of repos from the config file.
+    REPO_LIST = []
+    for (repo_name, repo_id) in config.items("REPO_LIST"):
+        REPO_LIST.append( (repo_name, repo_id) )
 
-AUTH = ('token', config['ACCESS']['AUTH_TOKEN'])
-ACCESS_TOKEN = config['ACCESS']['ZEN_ACCESS']
+    # Gather credentials
+    AUTH = ('token', config['ACCESS']['AUTH_TOKEN'])
+    ACCESS_TOKEN = config['ACCESS']['ZEN_ACCESS']
 
-# See https://developer.github.com/v3/issues/#list-repository-issues
-QUERY = config['ACCESS']['QUERY']
+    # See https://developer.github.com/v3/issues/#list-repository-issues
+    QUERY = config['ACCESS']['QUERY']
 
-ISSUES = 0
-FILENAME = config['ACCESS']['FILENAME']
-OPENFILE = open(FILENAME, 'w', newline='\n')
-FILEOUTPUT = csv.writer(OPENFILE, dialect='excel', quoting=csv.QUOTE_NONNUMERIC)
+    ISSUES = 0
+    FILENAME = config['ACCESS']['FILENAME']
 
-FILEOUTPUT.writerow(('Repository', 
-                     'Issue Number', 'Issue Title',
-                     'Description', 
-                     'Category', 'Tag', 
-                     'Assigned To',
-                     'Priority', 
-                     'State',
-                     'Pipeline',
-                     'Issue Author',
-                     'Created At', 'Updated At', 
-                     'Labels', 'Estimate'
-                     ))
+    # @TODO: refactor this common stuff
+    # @TODO: move headers into config? or make 
+    csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
+    col_headers = [
+        #'ID',
+        'Work Item Type',
+        'Title',
+        #'Title 2',
+        'Description',
+        'Tags',
+        'Assigned To',
+        'Priority',
+        'State',
+        'Created By',
+        'Created Date',
+        'Changed Date',
+        'Effort',
+        #'Parent',
+        'Iteration Path',
+    ]
+    # @TODO: use with idiom here (no need to close in that case)
+    OPENFILE = open(FILENAME, 'w', newline='\n')
+    FILEOUTPUT = csv.DictWriter(OPENFILE, fieldnames=col_headers, dialect='excel', quoting=csv.QUOTE_ALL)
+    FILEOUTPUT.writeheader()
 
-for repo_data in REPO_LIST:
-    get_issues(repo_data)
+    for repo_data in REPO_LIST:
+        get_issues(repo_data)
 
-OPENFILE.close()
+    OPENFILE.close()
