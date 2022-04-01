@@ -2,6 +2,9 @@
 """
 Functions relevant to ZenHub/GitHub source.
 """
+
+import requests
+
 def query_github_issues(query, config):
     print('Retrieving issues.... ' + query)
     issues = get_github_api(query, config)

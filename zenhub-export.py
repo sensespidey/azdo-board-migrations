@@ -8,7 +8,6 @@ Supports Github API v3 and ZenHubs current working API.
 """
 import csv
 import datetime
-import requests
 import sys
 
 # Set utf-8 encoding everywhere (https://stackoverflow.com/a/63573649)
@@ -110,7 +109,7 @@ def process_issue(issue, zen_r):
     #DateUpdated = issue['updated_at'][:-10]
 
     DateCreated = parse_date(issue['created_at'])
-    DateUpdated = parse_date(issues['updated_at'])
+    DateUpdated = parse_date(issue['updated_at'])
 
     assignees, tags, category, priority, labels = '', '', '', '', ''
 
