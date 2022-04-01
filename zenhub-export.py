@@ -18,31 +18,20 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from common import get_config, hub_row_data
+from common import get_config, get_column_headers, prepare_row, hub_row_data
+from hub import hub_row_data
 
 def main():
     config = get_config()
+    csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
 
     # @TODO: refactor this common stuff
-    # @TODO: move headers into config? or make 
-    csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
-    col_headers = [
-        'Work Item Type',
-        'Title',
-        'Description',
-        'Tags',
-        'Assigned To',
-        'Priority',
-        'State',
-        'Created By',
-        'Created Date',
-        'Changed Date',
-        'Effort',
-        'Iteration Path',
-    ]
+    # @TODO: move headers into config? or make them 
+
     # @TODO: use with idiom here (no need to close in that case)
+
     OPENFILE = open(config['FILENAME'], 'w', newline='\n', encoding="utf-8")
-    FILEOUTPUT = csv.DictWriter(OPENFILE, fieldnames=col_headers, dialect='excel', quoting=csv.QUOTE_ALL)
+    FILEOUTPUT = csv.DictWriter(OPENFILE, fieldnames=get_column_headers().values(), dialect='excel', quoting=csv.QUOTE_ALL)
     FILEOUTPUT.writeheader()
     config['FILEOUTPUT'] = FILEOUTPUT
 
@@ -51,88 +40,134 @@ def main():
 
     OPENFILE.close()
 
+def github_api_base():
+    return 'https://api.github.com/'
+
+def get_github_api_raw(url, config):
+    return requests.get(url, auth=config['GITHUB_AUTH'], verify=False)
+
+def get_github_api(endpoint, config):
+    return get_github_api_raw(github_api_base() + endpoint, config)
+
+def get_repo_id(repo_name, config):
+    repo_json = get_github_api(f'repos/{repo_name}', config).json()
+    return repo_json['id']
+
+def query_github_issues(query, config):
+    print('Retrieving issues.... ' + query)
+    issues = get_github_api(query, config)
+
+    if not issues.status_code == 200:
+        raise Exception("Request returned status of:"+str(issues.status_code))
+    else:
+        return issues
+
+
 
 def get_issues(repo_data, config):
     repo_name = repo_data[0]
     repo_ID = repo_data[1]
 
-    issues_for_repo_url = f'https://api.github.com/repos/{repo_name}/issues?{config["QUERY"]}'
-    print('Retrieving issues.... ' + issues_for_repo_url)
+  #  issues_for_repo = query if query is not None else f'repos/{repo_name}/issues?' + config["QUERY"]
+    issues = query_github_issues(f'repos/{repo_name}/issues', config)
 
     # @TODO: wrap this in an iterator
-    r = requests.get(issues_for_repo_url, auth=config['GITHUB_AUTH'], verify=False)
-    write_issues(r, config['FILEOUTPUT'], repo_name, repo_ID, config['ZENHUB_AUTH'])
 
-    if 'link' in r.headers:
-        pages = dict(
-            [(rel[6:-1], url[url.index('<') + 1:-1]) for url, rel in
-             [link.split(';') for link in
-              r.headers['link'].split(',')]])
-        # @TODO: wrap this in an iterator?
-        # this goes away in the iterator..
-        while 'last' in pages and 'next' in pages:
-            pages = dict(
-                [(rel[6:-1], url[url.index('<') + 1:-1]) for url, rel in
-                 [link.split(';') for link in
-                  r.headers['link'].split(',')]])
-            r = requests.get(pages['next'], auth=config['GITHUB_AUTH'], verify=False)
-            write_issues(r, config['FILEOUTPUT'], repo_name, repo_ID, config['ZENHUB_AUTH'])
-            if pages['next'] == pages['last']:
-                break
-            
-def write_issues(r, csvout, repo_name, repo_ID, ZENHUB_AUTH):
-    if not r.status_code == 200:
-        raise Exception("Request returned status of:"+str(r.status_code))
+    count = len(issues.json())
+    print(f'Loaded {count} issues. Loading ZenHub data...')
 
-    r_json = r.json()
-    print(str(len(r_json)) + ' issues loaded. Loading ZenHub data...')
-    for issue in r_json:
-        print(repo_name + ' issue: ' + str(issue['number']))
-
-        zenhub_issue_url = 'https://api.zenhub.io/p1/repositories/' + str(repo_ID) + '/issues/' + str(issue['number']) + '?access_token=' + ZENHUB_AUTH
-        zen_r = requests.get(zenhub_issue_url, verify=False).json()
-
-        # DEBUG
-        rprint(issue)
-        rprint(zen_r)
-
-        DateCreated = issue['created_at'][:-10]
-        DateUpdated = issue['updated_at'][:-10]
-
+    issues_list = []
+    for issue in issues.json():
         # Ignore pull requests, which github treats as issues
         if 'pull_request' in issue:
             continue
 
-        assignees, tags, category, priority, labels = '', '', '', '', ''
+        zen_r = query_zenhub_issue(repo_name, issue['number'], config).json()
 
-        for i in issue['assignees'] if issue['assignees'] else []:
-            assignees += i['login'] + ','
+        print(f'{repo_name} issue: ' + str(issue['number']))
+        issues_list.append(process_issue(issue, zen_r))
 
-        for x in issue['labels'] if issue['labels'] else []:
-            tags += x['name'] + ','
-#            if "Category" in x['name']:
-#                category = x['name'][11:11 + len(x['name'])]
-#            elif "Tag" in x['name']:
-#                tag = x['name'][6:6 + len(x['name'])]
-#            elif "Priority" in x['name']:
-#                priority = x['name'][11:11 + len(x['name'])]
-#            else:
-#                labels += x['name'] + ','
+        # DEBUG
+        #rprint(issue)
+        #rprint(zen_r)
 
-        estimate = zen_r.get('estimate', dict()).get('value', "")
 
-        if issue['state'] == 'closed':
-            Pipeline = 'Closed'
-        else:
-            Pipeline = zen_r.get('pipeline', dict()).get('name', "")
+    write_issues(issues_list, config['FILEOUTPUT'])
 
-        if not issue.get('body'):
-            issue['body'] = ''
+    rprint(issues.headers['link'])
 
-        issue['is_epic'] = zen_r['is_epic'] if "is_epic" in zen_r else False
+    if 'link' in issues.headers:
+        link_header = issues.headers['link']
+        pages = get_pages(link_header)
+        rprint(pages)
+        exit()
 
-        row_dict = hub_row_data(issue, tags, assignees, priority, DateCreated, DateUpdated, estimate)
-        csvout.writerow(row_dict)
+
+        # @TODO: wrap this in an iterator?
+        # this goes away in the iterator..
+        while 'last' in pages and 'next' in pages:
+            pages = get_pages()
+            pages = dict(
+                [(rel[6:-1], url[url.index('<') + 1:-1]) for url, rel in
+                 [link.split(';') for link in
+                  issues.headers['link'].split(',')]])
+
+            issues = get_github_api_raw(pages['next'], config)
+            write_issues(issues, config['FILEOUTPUT'], repo_name, repo_ID, config['ZENHUB_AUTH'])
+
+            if pages['next'] == pages['last']:
+                break
+            
+def get_pages(link_header):
+    return dict(
+        [(rel[6:-1], url[url.index('<') + 1:-1]) for url, rel in
+            [link.split(';') for link in
+            link_header.split(',')]])
+
+
+def zenhub_api_base():
+    return 'https://api.zenhub.io/p1/repositories/'
+
+def query_zenhub_issue(repo_name, issue_num, config):
+    repo_ID = get_repo_id(repo_name, config)
+    ZENHUB_AUTH = config['ZENHUB_AUTH']
+    zenhub_issue_url = zenhub_api_base() + f'{repo_ID}/issues/{issue_num}?access_token={ZENHUB_AUTH}'
+
+    print(f'Retrieving ZenHub data for {repo_name}: {issue_num} ({zenhub_issue_url})')
+    return requests.get(zenhub_issue_url, verify=False)
+
+def write_issues(issues, csvout):
+    for issue in issues:
+        csvout.writerow(prepare_row(issue))
+
+def process_issue(issue, zen_r):
+    DateCreated = issue['created_at'][:-10]
+    DateUpdated = issue['updated_at'][:-10]
+
+    assignees, tags, category, priority, labels = '', '', '', '', ''
+
+    for i in issue['assignees'] if issue['assignees'] else []:
+        assignees += i['login'] + ','
+
+    for x in issue['labels'] if issue['labels'] else []:
+        tags += x['name'] + ','
+
+    estimate = zen_r.get('estimate', dict()).get('value', "")
+
+    if issue['state'] == 'closed':
+        Pipeline = 'Closed'
+    else:
+        Pipeline = zen_r.get('pipeline', dict()).get('name', "")
+
+    if not issue.get('body'):
+        issue['body'] = ''
+
+    issue['is_epic'] = zen_r['is_epic'] if "is_epic" in zen_r else False
+
+    row_dict = hub_row_data(issue, tags, assignees, priority, DateCreated, DateUpdated, estimate)
+    return row_dict
+
+
 
 if __name__ == '__main__':
     main()
