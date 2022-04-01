@@ -52,9 +52,8 @@ def prepare_row(row_dict):
     return row
 
 def parse_date(date_str):
-    dst_fmt='%m/%d/%Y %H:%M:%S %p'
+    # This is what we need for AzDo import, in UTC (as provided by GitHub)
+    dst_fmt='%m/%d/%Y %I:%M:%S %p'
     dt = date_parse(date_str)
-    dt_local = dt.astimezone(pytz.timezone('America/Halifax'))
-    print(f"Original date string is: {date_str}")
-    print(dt_local.strftime(dst_fmt))
-    return dt_local.strftime(dst_fmt)
+    dt_local = dt.strftime(dst_fmt)
+    return dt_local
