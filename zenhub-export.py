@@ -18,8 +18,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from common import get_config, get_column_headers, prepare_row, hub_row_data
-from hub import hub_row_data
+from common import get_config, get_column_headers, prepare_row
+from hub import query_github_issues, query_zenhub_issue, hub_row_data, get_github_api_raw
 
 def main():
     config = get_config()
@@ -39,30 +39,6 @@ def main():
         get_issues(repo_data, config)
 
     OPENFILE.close()
-
-def github_api_base():
-    return 'https://api.github.com/'
-
-def get_github_api_raw(url, config):
-    return requests.get(url, auth=config['GITHUB_AUTH'], verify=False)
-
-def get_github_api(endpoint, config):
-    return get_github_api_raw(github_api_base() + endpoint, config)
-
-def get_repo_id(repo_name, config):
-    repo_json = get_github_api(f'repos/{repo_name}', config).json()
-    return repo_json['id']
-
-def query_github_issues(query, config):
-    print('Retrieving issues.... ' + query)
-    issues = get_github_api(query, config)
-
-    if not issues.status_code == 200:
-        raise Exception("Request returned status of:"+str(issues.status_code))
-    else:
-        return issues
-
-
 
 def get_issues(repo_data, config):
     repo_name = repo_data[0]
@@ -125,17 +101,6 @@ def get_pages(link_header):
             link_header.split(',')]])
 
 
-def zenhub_api_base():
-    return 'https://api.zenhub.io/p1/repositories/'
-
-def query_zenhub_issue(repo_name, issue_num, config):
-    repo_ID = get_repo_id(repo_name, config)
-    ZENHUB_AUTH = config['ZENHUB_AUTH']
-    zenhub_issue_url = zenhub_api_base() + f'{repo_ID}/issues/{issue_num}?access_token={ZENHUB_AUTH}'
-
-    print(f'Retrieving ZenHub data for {repo_name}: {issue_num} ({zenhub_issue_url})')
-    return requests.get(zenhub_issue_url, verify=False)
-
 def write_issues(issues, csvout):
     for issue in issues:
         csvout.writerow(prepare_row(issue))
@@ -166,7 +131,6 @@ def process_issue(issue, zen_r):
 
     row_dict = hub_row_data(issue, tags, assignees, priority, DateCreated, DateUpdated, estimate)
     return row_dict
-
 
 
 if __name__ == '__main__':
