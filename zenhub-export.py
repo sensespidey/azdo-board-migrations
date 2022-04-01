@@ -18,7 +18,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from common import get_config, get_column_headers, prepare_row
+from common import get_config, get_column_headers, prepare_row, parse_date
 from hub import query_github_issues, query_zenhub_issue, hub_row_data, get_github_api_raw
 
 def main():
@@ -106,8 +106,11 @@ def write_issues(issues, csvout):
         csvout.writerow(prepare_row(issue))
 
 def process_issue(issue, zen_r):
-    DateCreated = issue['created_at'][:-10]
-    DateUpdated = issue['updated_at'][:-10]
+    #DateCreated = issue['created_at'][:-10]
+    #DateUpdated = issue['updated_at'][:-10]
+
+    DateCreated = parse_date(issue['created_at'])
+    DateUpdated = parse_date(issues['updated_at'])
 
     assignees, tags, category, priority, labels = '', '', '', '', ''
 
