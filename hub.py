@@ -113,7 +113,7 @@ class HubIssues:
         rprint(zen_r)
 
         # Work Item Type
-        if ("is_epic" in issue and issue['is_epic']):
+        if ("is_epic" in zen_r and zen_r['is_epic']):
             issue['wit'] = 'Epic'
         else:
             issue['wit'] = 'Product Backlog Item'
@@ -128,7 +128,7 @@ class HubIssues:
             assignees += i['login'] + ','
 
         for x in issue['labels'] if issue['labels'] else []:
-            tags += x['name'] + ','
+            tags += x['name'] + ' , '
 
         if issue.get('body'):
             body = str(issue['body'])
@@ -136,19 +136,20 @@ class HubIssues:
         issue['body'] = body + "\n\nOriginal GitHub issue link: " + str(issue['url'])
 
         issue['estimate'] = zen_r.get('estimate', dict()).get('value', "")
-        issue['is_epic'] = zen_r['is_epic'] if "is_epic" in zen_r else False
+       # issue['is_epic'] = zen_r['is_epic'] if "is_epic" in zen_r else False
 
         Pipeline = zen_r.get('pipeline', dict()).get('name', "")
         print("PIPELINE VALUE: " + Pipeline)
         if Pipeline == 'Closed' or Pipeline == 'Done':
-            issue['state'] = 'Done'
+            issue['state'] = 'New'
             issue['estimate'] = ''
+            tags += 'closed'
         else:
             issue['state'] = 'New'
 
         row_dict = {
             'type': issue['wit'],
-            'title': issue['title'],
+            'title': issue['title'][0:255],
             'body': issue['body'],
             'tags': tags,
             #'assignee': assignees[:-1],

@@ -22,8 +22,8 @@ from hub import HubIssues
 def init_fileoutput(file):
     """Setup CSV DictWriter with appropriate quoting/delimiting for AzDo import."""
     fields = get_column_headers().values()
-    #csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
-    writer = csv.DictWriter(file, fieldnames=fields, dialect='excel', quoting=csv.QUOTE_ALL)
+    csv.register_dialect('azdo', 'excel',  doublequote=True, escapechar='\\')
+    writer = csv.DictWriter(file, fieldnames=fields, dialect='azdo', quoting=csv.QUOTE_ALL)
     writer.writeheader()
     return writer
 
