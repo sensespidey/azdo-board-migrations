@@ -19,35 +19,27 @@ from rich import print as rprint
 from common import get_config, get_column_headers, prepare_row
 from hub import HubIssues
 
+def init_fileoutput(file):
+    """Setup CSV DictWriter with appropriate quoting/delimiting for AzDo import."""
+    fields = get_column_headers().values()
+    #csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
+    writer = csv.DictWriter(file, fieldnames=fields, dialect='excel', quoting=csv.QUOTE_ALL)
+    writer.writeheader()
+    return writer
+
 def main():
     config = get_config()
-    
-    # @TODO: Is this doing anything?
-    csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
-
-    # @TODO: use with idiom here (no need to close in that case)
-    OPENFILE = open(config['FILENAME'], 'w', newline='\n', encoding="utf-8")
-    # @TODO: move headers into config? or make them 
-    FILEOUTPUT = csv.DictWriter(OPENFILE, fieldnames=get_column_headers().values(), dialect='excel', quoting=csv.QUOTE_ALL)
-    FILEOUTPUT.writeheader()
-    config['FILEOUTPUT'] = FILEOUTPUT
-
-    for repo_data in config['REPO_LIST']:
-        get_issues(repo_data, config)
-
-    OPENFILE.close()
-
-def get_issues(repo_data, config):
-    repo_name = repo_data[0]
-    repo_ID = repo_data[1]
-
-  #  issues_for_repo = query if query is not None else f'repos/{repo_name}/issues?' + config["QUERY"]
-    issue_iter = HubIssues(repo_name, config)
-    for issues in issue_iter:
-        write_issues(issues, config['FILEOUTPUT'])
+    with open(config['FILENAME'], 'w', newline='\n', encoding='utf-8') as file:
+        outfile = init_fileoutput(file)
+        for repo_data in config['REPO_LIST']:
+            for issues in HubIssues(repo_data[0], config):
+                write_issues(issues, outfile)
 
 def write_issues(issues, csvout):
+    """Takes a list of the latest <100 issues, with keys set from the source data, normalizes and writes it to our file."""
     for issue in issues:
+        print("Writing row for issue: ")
+        rprint(prepare_row(issue))
         csvout.writerow(prepare_row(issue))
 
 if __name__ == '__main__':
