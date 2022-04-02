@@ -11,6 +11,7 @@ def get_config():
     config.read('config.ini')
 
     # Get a list of repos from the config file.
+    #@TODO: don't need IDs for these anymore, but perhaps destination "Iteration Path" string?
     REPO_LIST = []
     for (repo_name, repo_id) in config.items("HUB_REPO_LIST"):
         REPO_LIST.append( (repo_name, repo_id) )
@@ -42,7 +43,7 @@ def get_column_headers():
         'created': 'Created Date',
         'changed': 'Changed Date',
         'effort': 'Effort',
-        'iteration': 'Iteration Path'
+        'iteration': 'Iteration Path',
     }
 
 def prepare_row(row_dict):

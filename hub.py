@@ -12,8 +12,10 @@ from rich import print as rprint
 def query_github_issues(query, config):
     print('Retrieving issues.... ' + query)
     issues = get_github_api(query, config)
+    issues.raise_for_status()
 
     if not issues.status_code == 200:
+        rprint(issues.headers)
         raise Exception("Request returned status of:"+str(issues.status_code))
     else:
         return issues
@@ -47,7 +49,7 @@ class HubIssues:
         self.config = config
         self.last_page = False
         self.repo_name = repo_name
-        self.query_url = github_api_base() + f'repos/{repo_name}/issues'
+        self.query_url = github_api_base() + f'repos/{repo_name}/issues?' + config['QUERY']
         #self.query_url = 'https://api.github.com/repositories/332794551/issues?page=4'
 
     def __iter__(self):
@@ -68,8 +70,11 @@ class HubIssues:
             if 'pull_request' in issue:
                 continue
 
+            # Collect Zenhub details on this issue, in JSON format.
             zen_r = query_zenhub_issue(self.repo_name, issue['number'], self.config).json()
 
+            # process_issue takes the issue object and the zen_r object and creates a sanitized object, keyed by our defined column_headers
+            #@TODO: figure out a way to enforce the link between processed fields and column_headers/keys
             print(f'{self.repo_name} issue: ' + str(issue['number']))
             issues_list.append(self.process_issue(issue, zen_r))
 
@@ -96,19 +101,28 @@ class HubIssues:
             return
 
         # Otherwise, request the next url.
+   # DEBUG: don't do pagination while troubleshooting :)
+#        self.query_url = None
         self.query_url = pages['next']
 
 
     def process_issue(self, issue, zen_r):
         # DEBUG
         print("Processing issue... " + str(issue['url']))
-        #rprint(issue)
-        #rprint(zen_r)
+        rprint(issue)
+        rprint(zen_r)
 
+        # Work Item Type
+        if ("is_epic" in issue and issue['is_epic']):
+            issue['wit'] = 'Epic'
+        else:
+            issue['wit'] = 'Product Backlog Item'
+
+        # Dates
         DateCreated = parse_date(issue['created_at'])
         DateUpdated = parse_date(issue['updated_at'])
 
-        assignees, tags = '', ''
+        assignees, tags, body = '', '', ''
 
         for i in issue['assignees'] if issue['assignees'] else []:
             assignees += i['login'] + ','
@@ -116,13 +130,10 @@ class HubIssues:
         for x in issue['labels'] if issue['labels'] else []:
             tags += x['name'] + ','
 
-        if not issue.get('body'):
-            body = ''
-        else:
+        if issue.get('body'):
             body = str(issue['body'])
 
-        body += "\n\nOriginal GitHub issue link: " + str(issue['url'])
-        issue['body'] = body
+        issue['body'] = body + "\n\nOriginal GitHub issue link: " + str(issue['url'])
 
         issue['estimate'] = zen_r.get('estimate', dict()).get('value', "")
         issue['is_epic'] = zen_r['is_epic'] if "is_epic" in zen_r else False
@@ -131,17 +142,13 @@ class HubIssues:
         print("PIPELINE VALUE: " + Pipeline)
         if Pipeline == 'Closed' or Pipeline == 'Done':
             issue['state'] = 'Done'
+            issue['estimate'] = ''
         else:
             issue['state'] = 'New'
 
-        row_dict = self.hub_row_data(issue, tags, assignees, DateCreated, DateUpdated)
-        return row_dict
-
-    def hub_row_data(self, issue, tags, assignees, DateCreated, DateUpdated):
         row_dict = {
-            'type': 'Epic' if ("is_epic" in issue and issue['is_epic']) else 'Product Backlog Item',
+            'type': issue['wit'],
             'title': issue['title'],
-            #'body': str(issue['body']) + "\n\nOriginal GitHub issue link: " + str(issue['url']),
             'body': issue['body'],
             'tags': tags,
             #'assignee': assignees[:-1],
@@ -153,11 +160,13 @@ class HubIssues:
             'created': DateCreated,
             'changed': DateUpdated,
             'effort': issue['estimate'],
-            'iteration': 'ISSUE IMPORT TEST PROJECT'
+            #@TODO: parameterize this into config
+            'iteration': 'ISSUE IMPORT TEST PROJECT',
         }
         return row_dict
 
     def get_pages(self, link_header):
+        """Parse the link header in the API response to find next/last pages links."""
         return dict(
             [(rel[6:-1], url[url.index('<') + 1:-1]) for url, rel in
                 [link.split(';') for link in
