@@ -18,10 +18,9 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from lib.common import get_config, init_fileoutput, parse_date, prepare_row
+from lib.common import get_config, init_fileoutput, init_main, parse_date, prepare_row
 
-def main():
-    config = get_config()
+def main(config):
     rprint(config)
     with open(config['OUTPUT_FILE'], 'w', newline='\n', encoding='utf-8') as file:
         outfile = init_fileoutput(file)
@@ -97,4 +96,9 @@ def write_issue(issue, csvout):
     csvout.writerow(prepare_row(issue))
 
 if __name__ == '__main__':
-    main()
+    config = init_main()
+
+    if "JIRA_INPUT" not in config:
+        exit('config.ini does not contain a JIRA_INPUT section. Please see README.md for details.')
+
+    main(config)

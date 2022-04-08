@@ -15,11 +15,10 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from lib.common import get_config, init_fileoutput, prepare_row
+from lib.common import get_config, init_fileoutput, init_main, prepare_row
 from lib.hub import HubIssues
 
-def main():
-    config = get_config()
+def main(config):
     with open(config['OUTPUT_FILE'], 'w', newline='\n', encoding='utf-8') as file:
         outfile = init_fileoutput(file)
         for repo_data in config['REPO_LIST']:
@@ -34,4 +33,9 @@ def write_issues(issues, csvout):
         csvout.writerow(prepare_row(issue))
 
 if __name__ == '__main__':
-    main()
+    config = init_main()
+
+    if "REPO_LIST" not in config:
+        exit('config.ini does not contain a REPO_LIST for GitHub/ZenHub mode. Please see README.md for details.')
+
+    main(config)
