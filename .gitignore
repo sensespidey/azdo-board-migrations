@@ -1,4 +1,6 @@
 config*.ini
+issues/*
+jira/*
 issues*.csv
 issues*.json
 
