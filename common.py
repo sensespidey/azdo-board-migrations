@@ -2,6 +2,7 @@
 Functions common to all sources.
 """
 import configparser
+import csv
 from dateutil.parser import parse as date_parse
 import pytz
 
@@ -27,7 +28,7 @@ def get_config():
         'ZENHUB_AUTH': config.get('HUB_ACCESS', 'ZENHUB_AUTH'),
 
         # Output file
-        'FILENAME': config.get('OUTPUT', 'FILENAME'),
+        'OUTPUT_FILE': config.get('OUTPUT', 'FILENAME'),
     }
 
 def get_column_headers():
@@ -45,6 +46,14 @@ def get_column_headers():
         'effort': 'Effort',
         'iteration': 'Iteration Path',
     }
+
+def init_fileoutput(file):
+    """Setup CSV DictWriter with appropriate quoting/delimiting for AzDo import."""
+    fields = get_column_headers().values()
+    #csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
+    writer = csv.DictWriter(file, fieldnames=fields, dialect='excel', quoting=csv.QUOTE_ALL)
+    writer.writeheader()
+    return writer
 
 def prepare_row(row_dict):
     row = {}

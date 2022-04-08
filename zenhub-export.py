@@ -6,7 +6,6 @@ into Azure DevOps.
 
 Supports Github API v3 and ZenHubs current working API.
 """
-import csv
 import sys
 
 # Set utf-8 encoding everywhere (https://stackoverflow.com/a/63573649)
@@ -16,23 +15,15 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from common import get_config, get_column_headers, prepare_row
+from common import get_config, init_fileoutput, prepare_row
 from hub import HubIssues
-
-def init_fileoutput(file):
-    """Setup CSV DictWriter with appropriate quoting/delimiting for AzDo import."""
-    fields = get_column_headers().values()
-    csv.register_dialect('azdo', 'excel',  doublequote=True, escapechar='\\')
-    writer = csv.DictWriter(file, fieldnames=fields, dialect='azdo', quoting=csv.QUOTE_ALL)
-    writer.writeheader()
-    return writer
 
 def main():
     config = get_config()
-    with open(config['FILENAME'], 'w', newline='\n', encoding='utf-8') as file:
+    with open(config['OUTPUT_FILE'], 'w', newline='\n', encoding='utf-8') as file:
         outfile = init_fileoutput(file)
         for repo_data in config['REPO_LIST']:
-            for issues in HubIssues(repo_data[0], config):
+            for issues in HubIssues(repo_data, config):
                 write_issues(issues, outfile)
 
 def write_issues(issues, csvout):
