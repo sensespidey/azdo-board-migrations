@@ -45,11 +45,12 @@ def zenhub_api_base():
 class HubIssues:
     """Iterator class over ZenHub issues"""
 
-    def __init__(self, repo_name, config):
+    def __init__(self, repo_data, config):
         self.config = config
         self.last_page = False
-        self.repo_name = repo_name
-        self.query_url = github_api_base() + f'repos/{repo_name}/issues?' + config['QUERY']
+        self.repo_name = repo_data[0]
+        self.iteration = repo_data[1]
+        self.query_url = github_api_base() + f'repos/{self.repo_name}/issues?' + config['QUERY']
         #self.query_url = 'https://api.github.com/repositories/332794551/issues?page=4'
 
     def __iter__(self):
@@ -162,7 +163,7 @@ class HubIssues:
             'changed': DateUpdated,
             'effort': issue['estimate'],
             #@TODO: parameterize this into config
-            'iteration': 'ISSUE IMPORT TEST PROJECT',
+            'iteration': self.iteration,
         }
         return row_dict
 
