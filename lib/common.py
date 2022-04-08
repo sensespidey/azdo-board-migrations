@@ -6,32 +6,46 @@ import csv
 from dateutil.parser import parse as date_parse
 import pytz
 
+from rich import print as rprint
 
-def get_config():
+
+def get_config(INI_FILE='config.ini'):
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config.read(INI_FILE)
 
+    in_config = {
+        # Output file
+        'OUTPUT_FILE': config.get('OUTPUT', 'FILENAME'),
+    } 
+
+    in_config.update(get_hub_config(config))
+    in_config.update(get_jira_config(config))
+    rprint(in_config)
+    return in_config
+
+
+def get_hub_config(config):
     # Get a list of repos from the config file.
-    #@TODO: don't need IDs for these anymore, but perhaps destination "Iteration Path" string?
     REPO_LIST = []
     for (repo_name, repo_id) in config.items("HUB_REPO_LIST"):
         REPO_LIST.append( (repo_name, repo_id) )
 
     return {
         'REPO_LIST': REPO_LIST,
-        'JIRA_INPUT': config.get('JIRA_INPUT', 'FILENAME'),
-        'JIRA_ITERATION': config.get('JIRA_INPUT', 'ITERATION'),
-
         # See https://developer.github.com/v3/issues/#list-repository-issues
         'QUERY': config.get('HUB_ACCESS', 'QUERY'),
 
         # Gather credentials
         'GITHUB_AUTH': ('token', config.get('HUB_ACCESS', 'GITHUB_AUTH')),
         'ZENHUB_AUTH': config.get('HUB_ACCESS', 'ZENHUB_AUTH'),
-
-        # Output file
-        'OUTPUT_FILE': config.get('OUTPUT', 'FILENAME'),
     }
+
+def get_jira_config(config):
+    return {
+        'JIRA_INPUT': config.get('JIRA_INPUT', 'FILENAME'),
+        'JIRA_ITERATION': config.get('JIRA_INPUT', 'ITERATION'),
+    }
+
 
 def get_column_headers():
     return {
