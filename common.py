@@ -19,6 +19,8 @@ def get_config():
 
     return {
         'REPO_LIST': REPO_LIST,
+        'JIRA_INPUT': config.get('JIRA_INPUT', 'FILENAME'),
+        'JIRA_ITERATION': config.get('JIRA_INPUT', 'ITERATION'),
 
         # See https://developer.github.com/v3/issues/#list-repository-issues
         'QUERY': config.get('HUB_ACCESS', 'QUERY'),
