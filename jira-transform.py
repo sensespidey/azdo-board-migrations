@@ -18,7 +18,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from common import get_config, init_fileoutput, parse_date, prepare_row
+from lib.common import get_config, init_fileoutput, parse_date, prepare_row
 
 def main():
     config = get_config()
@@ -58,7 +58,9 @@ def get_jira_mapping():
     }
 
 def parse_jira_issue(row, iteration):
-    # Here make a mapping of 
+    # Here make a mapping of fields in the destination CSV, populated by data from the source row
+    # This is very quick and dirty, as it's a one-time operation, and the fields
+    # on both ends are subject to change for any particular use-case.
     issue = {}
     for key,val in get_jira_mapping().items():
         rprint(val)

@@ -15,8 +15,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 # DEBUG
 from rich import print as rprint
 
-from common import get_config, init_fileoutput, prepare_row
-from hub import HubIssues
+from lib.common import get_config, init_fileoutput, prepare_row
+from lib.hub import HubIssues
 
 def main():
     config = get_config()

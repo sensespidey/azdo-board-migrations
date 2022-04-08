@@ -4,7 +4,7 @@ Functions relevant to ZenHub/GitHub source.
 """
 
 import requests
-from common import parse_date
+from lib.common import parse_date
 
 # DEBUG
 from rich import print as rprint
