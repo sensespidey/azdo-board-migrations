@@ -9,6 +9,30 @@ import sys
 
 from rich import print as rprint
 
+def get_column_headers():
+    """This represents the set of AzDo Work Item Fields we populate for import. Some are not /really/ used, but in the import template anyway."""
+    return {
+        'type': 'Work Item Type',
+        'title': 'Title',
+        'body': 'Description',
+        'tags': 'Tags',
+        'assignee': 'Assigned To',
+        'priority': 'Priority',
+        'state': 'State',
+        'author': 'Created By',
+        'created': 'Created Date',
+        'changed': 'Changed Date',
+        'effort': 'Effort',
+        'iteration': 'Iteration Path',
+    }
+
+def prepare_row(row_dict):
+    """Take a dict keyed by the above column headers, and prepare it for writing to AzDo CSV"""
+    row = {}
+    for key,title in get_column_headers().items():
+        row[title] = row_dict[key]
+    return row
+
 def get_config(INI_FILE='config.ini'):
     config = configparser.ConfigParser()
     config.read(INI_FILE)
@@ -22,17 +46,7 @@ def get_config(INI_FILE='config.ini'):
     # Collect the mode-specific config elements, if available.
     in_config.update(get_hub_config(config))
     in_config.update(get_jira_config(config))
-    rprint(in_config)
     return in_config
-
-def init_fileoutput(file):
-    """Setup CSV DictWriter with appropriate quoting/delimiting for AzDo import."""
-    fields = get_column_headers().values()
-    #csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
-    writer = csv.DictWriter(file, fieldnames=fields, dialect='excel', quoting=csv.QUOTE_ALL)
-    writer.writeheader()
-    return writer
-
 
 def get_hub_config(config):
     if "HUB_REPO_LIST" not in config:
@@ -62,37 +76,6 @@ def get_jira_config(config):
         'JIRA_ITERATION': config.get('JIRA_INPUT', 'ITERATION'),
     }
 
-def get_column_headers():
-    """This represents the set of AzDo Work Item Fields we populate for import. Some are not /really/ used, but in the import template anyway."""
-    return {
-        'type': 'Work Item Type',
-        'title': 'Title',
-        'body': 'Description',
-        'tags': 'Tags',
-        'assignee': 'Assigned To',
-        'priority': 'Priority',
-        'state': 'State',
-        'author': 'Created By',
-        'created': 'Created Date',
-        'changed': 'Changed Date',
-        'effort': 'Effort',
-        'iteration': 'Iteration Path',
-    }
-
-def prepare_row(row_dict):
-    """Take a dict keyed by the above column headers, and prepare it for writing to AzDo CSV"""
-    row = {}
-    for key,title in get_column_headers().items():
-        row[title] = row_dict[key]
-    return row
-
-def parse_date(date_str):
-    # This is what we need for AzDo import, in UTC (as provided by GitHub)
-    dst_fmt='%m/%d/%Y %I:%M:%S %p'
-    dt = date_parse(date_str)
-    dt_local = dt.strftime(dst_fmt)
-    return dt_local
-
 def init_main():
     # @TODO: add support for --verbose and --help
     #opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
@@ -104,3 +87,18 @@ def init_main():
     print("Config file: "+args[0])
     config = get_config(args[0])
     return config
+
+def init_fileoutput(file):
+    """Setup CSV DictWriter with appropriate quoting/delimiting for AzDo import."""
+    fields = get_column_headers().values()
+    #csv.register_dialect('azdo', 'excel',  doublequote=False, escapechar='\\')
+    writer = csv.DictWriter(file, fieldnames=fields, dialect='excel', quoting=csv.QUOTE_ALL)
+    writer.writeheader()
+    return writer
+
+def parse_date(date_str):
+    """This is what we need for AzDo import, corresponding to local user preferences."""
+    dst_fmt='%m/%d/%Y %I:%M:%S %p'
+    dt = date_parse(date_str)
+    dt_local = dt.strftime(dst_fmt)
+    return dt_local
