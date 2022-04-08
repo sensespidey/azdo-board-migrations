@@ -8,43 +8,102 @@ This repository contains Python scripts to facilitate migrating Work Items into 
 
 The primary goal is to collect issue data and generate a CSV file appropriate for import into an Azure DevOps project.
 
+See details below depending on which data source you are working with (currently ZenHub/GitHub and Jira are supported).
+
 # Getting Started
 
-To make use of this code, you need to set up appropriate credentials, and create a config.ini file to contain them.
+The 2 main entrypoint scripts for this repository are:
+
+* `zenhub-export.py` - uses GitHub+ZenHub APIs to compile a CSV of issues for a given repository.
+* `jira-tranzform.py` - takes a JIRA-exported CSV file and transforms its format into one suited to import into Azure DevOps.
+
+Each of the scripts takes a config.ini file as its primary argument, and expects
+that file to provide its required parameters to consume, transform, and output
+the necessary file.
+
+For JIRA sources, we don't access an API, so no credentials are needed. Instead, the config files specify a previously-exported CSV file as the source data (see below for details).
 
 ## Credentials
+
+To make use of the Hub code, you need to set up appropriate credentials, and
+create a config.ini file to contain them. 
 
 The following credentials are needed:
 
 - GitHub Personal Access Token (link)
 - ZenHub Access Key (link)
 
-
 ##  Config.ini
 
+Each script uses a simple group-based INI-style config file to provide at least
+an output file for the script to write to.  Generally one config file for each
+source and output CSV file is recommended. 
+
+```
+[OUTPUT]
+FILENAME = issues.csv
+```
+
+### Hub (git/zen) config
 
 Add the following to config.ini with appropriate values:
 
 ```
-[ACCESS]
+[HUB_ACCESS]
 AUTH_TOKEN = <GitHub Personal Access Token>
 ZEN_ACCESS = <ZenHub Access Key>
-QUERY = # See https://developer.github.com/v3/issues/#list-repository-issues
-FILENAME = 
+QUERY = state=all&per_page=100 # See https://developer.github.com/v3/issues/#list-repository-issues
 
-[REPO_LIST]
-sensespidey/example-agile-project = 473431083
+[HUB_REPO_LIST]
+# Repo org/name = Iteration path in AzDo
+sensespidey/example-agile-project = "ISSUE IMPORT TEST PROJECT"
 ```
 
-The REPO_LIST should have the ID of the GitHub repository, which you can get by querying the GitHub API like so:
+The HUB_REPO_LIST maps a github namespace/repo to a Project-level (or lower)
+Iteration in Azure DevOps, so we can target a set of issues going into a (sub)team-level board, if needed.
+
+Related, the QUERY option provided here allows us to narrow down the list of
+issues pulled, and potentially "break down" the issues we pull into logical groups, as needed. Combined with targeted Iteration paths, this may provide for interesting use-cases.
+
+### JIRA config
+
+Add the following to config.ini with appropriate values:
 
 ```
-curl --location --request GET 'https://api.github.com/repos/ssc-spc-ccoe-cei/gcpboard' \
---header 'Authorization: token <insert GitHub PAT>'
+[JIRA_INPUT]
+FILENAME = Jira-Dump-28-March.csv
+ITERATION = ISSUE IMPORT TEST PROJECT
 ```
+
 # Usage
 
-To grab issues from Zen
+## Hub (git/zen) issue preparation
+
+To pull issues from ZenHub/GitHub APIs, we setup a config.ini as above, and run it as, eg:
+
+```
+python zenhub-export.py config-gcpboard.ini > gcpboard-issues.csv
+```
+
+## Jira issue preparation
+
+To transform an exported set of issues in JIRA's full-column CSV format, we run:
+
+```
+python jira-transform.py config-jira.ini
+```
+
+## Azure DevOps Import
+
+One thing of note in the common output logic here, the "closed" tag is added when we detect that the source had issues considered Closed in the list. AzDo won't let us import these by CSV directly, so one needs to manually close issues with that tag (and then remove the tag), when importing:
+
+1. Go to the project
+2. Queries -> Import Work Items
+3. Upload CSV file, then preview list of imported data items in draft.
+4. Review for issues, and save the whole set.
+5. Filter for `closed` tag, and manually close that set of issues.
+6. Remove the `closed` tag from this set as well.
+7. Consider adding a tag specific to this particular import, if needed.
 
 # Credits
 
