@@ -134,6 +134,8 @@ class HubIssues:
         if issue.get('body'):
             body = str(issue['body'])
 
+        # The GitHub API returns the URL in API format, so we convert it to a Web UI link.
+        issue['url'] = issue['url'].replace('https://api.github.com/repos', 'https://github.com')
         issue['body'] = body + "\n\nOriginal GitHub issue link: " + str(issue['url'])
 
         issue['estimate'] = zen_r.get('estimate', dict()).get('value', "")
@@ -153,17 +155,18 @@ class HubIssues:
             'title': issue['title'][0:255],
             'body': issue['body'],
             'tags': tags,
+            # User mappings don't carry over, so we lose assignee and author fields.
             #'assignee': assignees[:-1],
             'assignee': '',
-            'priority': 2,
-            'state': issue['state'],
             #'author': issue['user']['login'],
             'author': '',
+            'priority': 2,
+            'state': issue['state'],
             'created': DateCreated,
             'changed': DateUpdated,
             'effort': issue['estimate'],
-            #@TODO: parameterize this into config
             'iteration': self.iteration,
+            'github': issue['url'],
         }
         return row_dict
 

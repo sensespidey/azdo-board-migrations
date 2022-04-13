@@ -24,6 +24,7 @@ def get_column_headers():
         'changed': 'Changed Date',
         'effort': 'Effort',
         'iteration': 'Iteration Path',
+        'github': 'GitHub backref'
     }
 
 def prepare_row(row_dict):
