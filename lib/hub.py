@@ -85,6 +85,62 @@ class HubIssues:
         # And return the current list of issues.
         return issues_list
 
+    def process_issue(self, issue, zen_r):
+        """Take raw issue data from GitHub and ZenHub API, process into import dictionary format."""
+        # DEBUG
+        print("Processing issue... " + str(issue['url']))
+        rprint(issue)
+        rprint(zen_r)
+
+        # Work Item Type
+        if ("is_epic" in zen_r and zen_r['is_epic']):
+            issue['wit'] = 'Epic'
+        else:
+            issue['wit'] = 'Product Backlog Item'
+
+        body = ''
+        if issue.get('body'):
+            body = str(issue['body'])
+
+        # The GitHub API returns the URL in API format, so we convert it to a Web UI link.
+        issue['url'] = issue['url'].replace('https://api.github.com/repos', 'https://github.com')
+        issue['body'] = body + "\n\nOriginal GitHub issue link: " + str(issue['url'])
+
+        tags = ''
+        for x in issue['labels'] if issue['labels'] else []:
+            tags += x['name'] + ' , '
+
+        # We can't import a closed issue, but we give it a closed tag so we can manually close it after import.
+        Pipeline = zen_r.get('pipeline', dict()).get('name', "")
+        print("PIPELINE VALUE: " + Pipeline)
+        if Pipeline == 'Closed' or Pipeline == 'Done':
+            issue['estimate'] = ''
+            tags += 'closed'
+
+        assignees = ''
+        for i in issue['assignees'] if issue['assignees'] else []:
+            assignees += i['login'] + ','
+
+        return {
+            'type': issue['wit'],
+            'title': issue['title'][0:255],
+            'body': issue['body'],
+            'tags': tags,
+            # User mappings don't carry over, so we lose assignee and author fields.
+            #'assignee': assignees[:-1],
+            'assignee': '',
+            #'author': issue['user']['login'],
+            'author': '',
+            'priority': 2,
+            # We always set the state to New, since other states don't import correctly.
+            'state': 'New',
+            'created': parse_date(issue['created_at']),
+            'changed': parse_date(issue['updated_at']),
+            'effort': zen_r.get('estimate', dict()).get('value', ""),
+            'iteration': self.iteration,
+            'github': issue['url'],
+        }
+
     def set_new_query_url(self, issues):
         """Take a recent issues request, check for a next page of results to query."""
 
@@ -102,73 +158,7 @@ class HubIssues:
             return
 
         # Otherwise, request the next url.
-   # DEBUG: don't do pagination while troubleshooting :)
-#        self.query_url = None
         self.query_url = pages['next']
-
-
-    def process_issue(self, issue, zen_r):
-        # DEBUG
-        print("Processing issue... " + str(issue['url']))
-        rprint(issue)
-        rprint(zen_r)
-
-        # Work Item Type
-        if ("is_epic" in zen_r and zen_r['is_epic']):
-            issue['wit'] = 'Epic'
-        else:
-            issue['wit'] = 'Product Backlog Item'
-
-        # Dates
-        DateCreated = parse_date(issue['created_at'])
-        DateUpdated = parse_date(issue['updated_at'])
-
-        assignees, tags, body = '', '', ''
-
-        for i in issue['assignees'] if issue['assignees'] else []:
-            assignees += i['login'] + ','
-
-        for x in issue['labels'] if issue['labels'] else []:
-            tags += x['name'] + ' , '
-
-        if issue.get('body'):
-            body = str(issue['body'])
-
-        # The GitHub API returns the URL in API format, so we convert it to a Web UI link.
-        issue['url'] = issue['url'].replace('https://api.github.com/repos', 'https://github.com')
-        issue['body'] = body + "\n\nOriginal GitHub issue link: " + str(issue['url'])
-
-        issue['estimate'] = zen_r.get('estimate', dict()).get('value', "")
-       # issue['is_epic'] = zen_r['is_epic'] if "is_epic" in zen_r else False
-
-        Pipeline = zen_r.get('pipeline', dict()).get('name', "")
-        print("PIPELINE VALUE: " + Pipeline)
-        if Pipeline == 'Closed' or Pipeline == 'Done':
-            issue['state'] = 'New'
-            issue['estimate'] = ''
-            tags += 'closed'
-        else:
-            issue['state'] = 'New'
-
-        row_dict = {
-            'type': issue['wit'],
-            'title': issue['title'][0:255],
-            'body': issue['body'],
-            'tags': tags,
-            # User mappings don't carry over, so we lose assignee and author fields.
-            #'assignee': assignees[:-1],
-            'assignee': '',
-            #'author': issue['user']['login'],
-            'author': '',
-            'priority': 2,
-            'state': issue['state'],
-            'created': DateCreated,
-            'changed': DateUpdated,
-            'effort': issue['estimate'],
-            'iteration': self.iteration,
-            'github': issue['url'],
-        }
-        return row_dict
 
     def get_pages(self, link_header):
         """Parse the link header in the API response to find next/last pages links."""
