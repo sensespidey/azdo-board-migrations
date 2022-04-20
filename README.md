@@ -1,4 +1,4 @@
-# Introduction 
+# Introduction
 
 This repository contains Python scripts to facilitate migrating Work Items into Azure DevOps from a few external sources:
 
@@ -23,10 +23,18 @@ the necessary file.
 
 For JIRA sources, we don't access an API, so no credentials are needed. Instead, the config files specify a previously-exported CSV file as the source data (see below for details).
 
+## Create a local virtualenv, install requirements
+
+```
+python3 -m venv env
+source env/bin/activate
+python3 -m pip install -r requirements.txt
+```
+
 ## Credentials
 
 To make use of the Hub code, you need to set up appropriate credentials, and
-create a config.ini file to contain them. 
+create a config.ini file to contain them.
 
 The following credentials are needed:
 
@@ -35,9 +43,11 @@ The following credentials are needed:
 
 ##  Config.ini
 
+See `config.ini.example` for a complete example.
+
 Each script uses a simple group-based INI-style config file to provide at least
 an output file for the script to write to.  Generally one config file for each
-source and output CSV file is recommended. 
+source and output CSV file is recommended.
 
 ```
 [OUTPUT]
@@ -82,7 +92,7 @@ ITERATION = ISSUE IMPORT TEST PROJECT
 To pull issues from ZenHub/GitHub APIs, we setup a config.ini as above, and run it as, eg:
 
 ```
-python zenhub-export.py config-gcpboard.ini > gcpboard-issues.csv
+python zenhub-export.py config-gcpboard.ini
 ```
 
 ## Jira issue preparation

@@ -1,0 +1,16 @@
+[OUTPUT]
+FILENAME = issues/issues.csv
+
+## Use this section if your source is GitHub/ZenHub:
+[HUB_ACCESS]
+GITHUB_AUTH = <github PAT>
+ZENHUB_AUTH = <zenhub access key>
+QUERY = state=all&per_page=100
+
+[HUB_REPO_LIST]
+sensespidey/azdo-board-migrations = <iteration path in AZDO project> # Usually this is just the name of the project.
+
+## Use this section if your source is Jira:
+[JIRA_INPUT]
+FILENAME = jira/Jira-Dump-28-March.csv
+ITERATION = <iteration path in AZDO project> # Usually just the name of the project.
