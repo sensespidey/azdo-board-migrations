@@ -110,5 +110,4 @@ One thing of note in the common output logic here, the "closed" tag is added whe
 These scripts were derived from the following sources:
 
 * https://gist.github.com/unbracketed/3380407
-* https://github.com/ZenHubIO/support/issues/1070
 * https://gist.github.com/Kebiled/7b035d7518fdfd50d07e2a285aff3977 @PinnaclePSM Author Jamie Belcher
