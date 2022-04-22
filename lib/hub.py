@@ -50,6 +50,7 @@ class HubIssues:
         self.last_page = False
         self.repo_name = repo_data[0]
         self.iteration = repo_data[1]
+        self.area = config['AREA_PATH']
         self.query_url = github_api_base() + f'repos/{self.repo_name}/issues?' + config['QUERY']
         #self.query_url = 'https://api.github.com/repositories/332794551/issues?page=4'
 
@@ -138,6 +139,7 @@ class HubIssues:
             'changed': parse_date(issue['updated_at']),
             'effort': zen_r.get('estimate', dict()).get('value', ""),
             'iteration': self.iteration,
+            'area': self.area,
             'github': issue['url'],
         }
 

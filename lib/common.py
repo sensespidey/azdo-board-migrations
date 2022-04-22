@@ -24,6 +24,7 @@ def get_column_headers():
         'changed': 'Changed Date',
         'effort': 'Effort',
         'iteration': 'Iteration Path',
+        'area': 'Area Path',
         'github': 'GitHub backref'
     }
 
@@ -61,7 +62,8 @@ def get_hub_config(config):
     return {
         'REPO_LIST': REPO_LIST,
         # See https://developer.github.com/v3/issues/#list-repository-issues
-        'QUERY': config.get('HUB_ACCESS', 'QUERY'),
+        'QUERY': config.get('HUB_OPTS', 'QUERY'),
+        'AREA_PATH': config.get('HUB_OPTS', 'AREA_PATH'),
 
         # Gather credentials
         'GITHUB_AUTH': ('token', config.get('HUB_ACCESS', 'GITHUB_AUTH')),

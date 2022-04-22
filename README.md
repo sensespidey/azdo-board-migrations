@@ -62,11 +62,14 @@ Add the following to config.ini with appropriate values:
 [HUB_ACCESS]
 AUTH_TOKEN = <GitHub Personal Access Token>
 ZEN_ACCESS = <ZenHub Access Key>
+
+[HUB_OPTS]
 QUERY = state=all&per_page=100 # See https://developer.github.com/v3/issues/#list-repository-issues
+AREA_PATH = ISSUE IMPORT TEST PROJECT\Staging
 
 [HUB_REPO_LIST]
 # Repo org/name = Iteration path in AzDo
-sensespidey/example-agile-project = "ISSUE IMPORT TEST PROJECT"
+sensespidey/example-agile-project = ISSUE IMPORT TEST PROJECT
 ```
 
 The HUB_REPO_LIST maps a github namespace/repo to a Project-level (or lower)
@@ -83,6 +86,7 @@ Add the following to config.ini with appropriate values:
 [JIRA_INPUT]
 FILENAME = Jira-Dump-28-March.csv
 ITERATION = ISSUE IMPORT TEST PROJECT
+AREA = ISSUE IMPORT TEST PROJECT\Staging
 ```
 
 # Usage

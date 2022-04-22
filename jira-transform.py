@@ -54,6 +54,8 @@ def get_jira_mapping():
         'changed': 'Updated',
         'effort': '',
         'iteration': '',
+        'area': '',
+        'github': '',
     }
 
 def parse_jira_issue(row, iteration):

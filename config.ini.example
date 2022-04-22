@@ -5,7 +5,10 @@ FILENAME = issues/issues.csv
 [HUB_ACCESS]
 GITHUB_AUTH = <github PAT>
 ZENHUB_AUTH = <zenhub access key>
+
+[HUB_OPTS]
 QUERY = state=all&per_page=100
+AREA_PATH = <area path in AZDO project>
 
 [HUB_REPO_LIST]
 sensespidey/azdo-board-migrations = <iteration path in AZDO project> # Usually this is just the name of the project.
@@ -14,3 +17,4 @@ sensespidey/azdo-board-migrations = <iteration path in AZDO project> # Usually t
 [JIRA_INPUT]
 FILENAME = jira/Jira-Dump-28-March.csv
 ITERATION = <iteration path in AZDO project> # Usually just the name of the project.
+AREA = <area path in AZDO project>
