@@ -38,8 +38,8 @@ create a config.ini file to contain them.
 
 The following credentials are needed:
 
-- GitHub Personal Access Token (link)
-- ZenHub Access Key (link)
+- GitHub Personal Access Token (https://github.com/settings/tokens)
+- ZenHub Access Key (https://app.zenhub.com/settings/tokens)
 
 ##  Config.ini
 
